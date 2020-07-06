@@ -89,4 +89,4 @@ A = ax1.plot(XAVG1,YAVG1, marker = "o", color = "b")
 B = ax1.plot(XAVG2,YAVG2, marker = "o", color = "b")
     
 Rhoavg = rhos/n
-print("The final )
+print("The effective correlation is :", str(Rho))
