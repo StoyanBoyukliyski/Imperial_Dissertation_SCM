@@ -7,7 +7,8 @@ Created on Sat Jul  4 12:56:47 2020
 import numpy as np
 import matplotlib.pyplot as plt
 
-select = 0.01
+
+select = 0.1
 
 if float(select) < 1:
     parb = 8.5 + 17.2*float(select)
@@ -18,17 +19,19 @@ else:
 def Rho(h):
     rho = np.exp(-3*h/parb)
     return rho
+        
+        
 
 x1 = 0
-x2 = 4
-x3 = 0
-x4 = 4
+x2 = 2
+x3 = 2
+x4 = 5
 
 
 y1 = 0
-y2 = 4
-y3 = 0
-y4 = 4
+y2 = 2
+y3 = 4
+y4 = 6
 
 fig = plt.figure(1)
 ax1 = fig.add_subplot(121)
@@ -63,7 +66,7 @@ for j in range(200):
     r = np.random.uniform(x3,x4,1)
     z = np.random.uniform(y3,y4,1)
     ax1.plot(x,y,"r.")
-    ax1.plot(r,z,"r.")
+    ax1.plot(r,z,"k.")
     dist = np.sqrt((r-x)**2+(z-y)**2)
     Expected = Rho(np.sqrt(((x4+x3-x2-x1)/2)**2+((y4+y3-y2-y1)/2)**2))
     A = ax1.plot(XAVG1,YAVG1, marker = "o", color = "white")
