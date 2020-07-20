@@ -17,13 +17,16 @@ from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
 
 import matplotlib.animation as animation
-import CellStatAnalysis as CSA
 import Cholesky as Ch
 
 Lx = Ch.Lx
 Ly = Ch.Ly
-n = CSA.discx
-m = CSA.discy
+discx = 10
+discy = 10
+
+n = discx
+m = discy
+
 initdist = Ch.initdist
 dx = Lx/(n-1)
 dy = Ly/(m-1)
@@ -46,7 +49,7 @@ matrices = []
 select = str(0.1)
 x = np.linspace(initdist, Lx + initdist, n)
 y = np.linspace(0, Ly, m)
-
+'''
 fig = plt.figure(3)
 ax = fig.add_subplot(1, 1, 1, projection='3d')
 ax.plot_wireframe(DX, DY, DZ)
@@ -55,7 +58,7 @@ ax.set_title("3D plot of Intensity Measures", {'fontsize': 12, 'fontweight' : 12
 ax.set_zlabel("Intesity Measure (g)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
 ax.set_ylabel("Distance in North (km)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad=20)
 ax.set_xlabel("Distance in East (km)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
-
+'''
 if float(select) < 1:
     parb = 8.5 + 17.2*float(select)
 else:

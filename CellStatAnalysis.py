@@ -11,9 +11,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ChiouandYoung2014 as CY
 import pandas as pd
+import GlobalDiscretization as GD
 
-discx = 10
-discy = 10
+discx = GD.discx
+discy = GD.discy
 dx = RF.dx
 dy = RF.dy
 Lx = RF.Lx
@@ -21,6 +22,7 @@ Ly = RF.Ly
 lensegx = Lx/discx
 lensegy = Ly/discy
 matrixofmatrix = []
+Correlations = GD.Cg
 
 
 data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
@@ -35,7 +37,6 @@ MeansIM = []
 StdSIM = []
 StandardDevC = []
 MeanC = []
-print(IM)
 for k in range(discy):
     for j in range(discx):
         dist = (j+1/2)*(Lx/discx)
@@ -50,12 +51,9 @@ for k in range(discy):
         StdIM = np.std(IMval)
         MeansIM.append(MeanIM)
         StdSIM.append(StdIM)
-        
-        
+        Corl = np.diag(Correlations)
         
         plt.figure()
         plt.hist(IMval, bins = 10)
-        plt.text(0, 1, "Mean of population = " + str(MeanIM) + "m/s^2" + "\n" + "Standard Deviation = " + str(StdIM))
         
-
-        
+RealStd = StandardDevC + StdSIM*np.sqrt(1-Corl**2)
