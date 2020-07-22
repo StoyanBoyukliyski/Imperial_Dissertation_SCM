@@ -10,8 +10,8 @@ import numpy as np
 
 Lx = 200
 Ly = 200
-n= 100   
-m = 10
+n= 100  
+m = 50
 initdist = 0
 dx = Lx/(n-1)
 dy = Ly/(m-1)
