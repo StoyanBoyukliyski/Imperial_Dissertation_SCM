@@ -22,8 +22,8 @@ import RandomFields as RF
 
 Lx = Ch.Lx
 Ly = Ch.Ly
-discx = 60
-discy = 60
+discx = 10
+discy = 10
 
 n = discx +1
 m = discy +1

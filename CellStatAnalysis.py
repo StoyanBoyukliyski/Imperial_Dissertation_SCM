@@ -123,6 +123,7 @@ for k in range(discy):
 Corl = np.diag(Correlations)
 GD.ax.plot_wireframe(RF.X, RF.Y, RF.Mean)
 GD.ax.scatter3D(GD.CXp, GD.CYp, MeansIM, color = "red")
+GD.ax.scatter3D(GD.CXp, GD.CYp, MeanC, color = "red")
 GD.ax.plot_wireframe(RF.X, RF.Y, MeanGlobal, color="green")
 
 fig = plt.figure()
