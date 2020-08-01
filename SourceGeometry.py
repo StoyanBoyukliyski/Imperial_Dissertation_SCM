@@ -32,15 +32,15 @@ class Arrow3D(FancyArrowPatch):
         FancyArrowPatch.draw(self, renderer)
 
 region = "US"
-M = 7.5
+M = 8
 data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
 
 
-beta = 90
+beta = 45
 beta = beta*np.pi/180
 rake = 120
 rake = rake*np.pi/180
-lambangle = 180
+lambangle = 90
 
 Tbeta = np.array([[1,0,0],[0, np.cos(beta),np.sin(beta)],[0,-np.sin(beta), np.cos(beta)]])
 Tfita = np.array([[np.cos(rake), np.sin(rake),0],[-np.sin(rake),np.cos(rake),0],[0,0,1]])

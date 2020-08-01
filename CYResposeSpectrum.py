@@ -25,15 +25,48 @@ data.head()
 data = data.set_index("Period(s)")
         
 Intensity = []
+StdWth = []
+StdBtw = []
 usablespec = data.index[2:]
+
 for j in usablespec:
     slc = data.loc[j]
     Intensity.append(float(CY.LognormalFunct(slc, 0,0)[0]))
+    StdWth.append(float(CY.LognormalFunct(slc, 0,0)[3]))
+    StdBtw.append(float(CY.LognormalFunct(slc, 0,0)[4]))
 
-
-figure = plt.figure()
+figure = plt.figure(1)
 ax2 = figure.add_subplot(111)
+C = np.zeros((len(usablespec),len(usablespec)))
+
+def I(Tmin):
+    if Tmin < 0.189:
+        I = 1
+    else:
+        I = 0
+    return I
+
+parb = 100
+for j in range(len(usablespec)):
+    for k in range(j, len(usablespec)):
+        Tmax = max(float(usablespec[k]), float(usablespec[j]))
+        Tmin = min(float(usablespec[k]), float(usablespec[j]))
+        h = Tmax-Tmin
+        rho = np.exp(-3*h/parb)
+#        rho = 1 - np.cos(np.pi/2 - (0.359 + 0.163*I(Tmin)*np.log(Tmin/0.189))*np.log(Tmax/Tmin))
+        
+        C[j,k] = C[j,k] + rho
+
+C = C + np.transpose(C) - np.diag(np.diag(C))
+
 ax2.plot([float(u) for u in usablespec], Intensity, "k-")
+for j in range(5):
+    ResidualBtw = np.random.normal(0,1,np.size(StdBtw))
+    ResidualWth = np.random.normal(0,1,np.size(StdWth))
+    L = np.linalg.cholesky(C)
+    ResidualWth = np.matmul(L,ResidualWth)
+    ax2.plot([float(u) for u in usablespec], Intensity*np.exp(ResidualBtw*StdBtw + ResidualWth*StdWth), "b-", linewidth = 0.6)
+    
 ax2.set_xscale("log")
 ax2.set_yscale("log")
 ax2.set_title("Response Spectrum using C&Y(2014)")

@@ -7,129 +7,246 @@ Created on Sun Jul 19 14:05:25 2020
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.stats import norm
-from scipy.stats import lognorm
-from mpl_toolkits import mplot3d
-from mpl_toolkits.mplot3d import Axes3D
-from itertools import combinations
-from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
-                               AutoMinorLocator)
-import matplotlib.animation as animation
 import math as ma
 
-import RandomFields as RF
 import ChiouandYoung2014 as CY
 import GlobalDiscretization as GD
 import Cholesky as Ch
 import JayaramBaker2009 as JB
+import VectorField as VF
+
+
+VF.ax.plot(GD.CXp,GD.CYp, "r.")
+VF.ax.plot_wireframe(GD.DX, GD.DY, GD.DZ)
+VF.ax.plot(GD.CXp,GD.CYp, "r.")
 
 
 discx = GD.discx
 discy = GD.discy
-dx = RF.dx
-dy = RF.dy
-Lx = RF.Lx
-Ly = RF.Ly
-lensegx = Lx/discx
-lensegy = Ly/discy
+dx = VF.dx
+dy = VF.dy
+lensegx = VF.Lx/discx
+lensegy = VF.Ly/discy
 matrixofmatrix = []
 Correlations = GD.Cg
 
 n= discx  
 m = discy
 
-Cg = np.zeros((n*m,n*m))
-C= np.zeros((n,n))
-matrices = []
+select = VF.select
 
-select = str(0.1)
-
-for z in range(m):
-        for i in range(n):
-            for j in range(i,n):
-                C[i,j] = JB.Rho(np.sqrt(((z)*dy)**2 + (dx*(j-i))**2),select)
-        matrices.append(np.array(C))
-
-for k in range(m):
-    Cg[(k)*n:(k+1)*n, (k)*n:(k+1)*n] = matrices[0]
-    for z in range(k+1,m):
-        C =  matrices[z-k]
-        Cr = C + np.transpose(C) - np.diag(np.diag(C))
-        Cg[(k)*n:(k+1)*n, (z)*n:(z+1)*n] = Cr
-        
-del matrices
-Cg = Cg + np.transpose(Cg) - np.identity(n*m) 
-
+Cg = Ch.MatrixBuilder(select, m, n, dx, dy)
 Lower = np.linalg.cholesky(Cg)
+ResidualWth = np.reshape(VF.ResidualWth, (Ch.n,Ch.m))
 
-data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
-data.head()
-data = data.set_index("Period(s)")
 
-select = str(0.1)
-slc = data.loc[select]
+StdGlobalwth = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
+StdGlobalbtw = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
 
-IM = RF.Zerwth
-MeansIM = []
-StdSIM = []
-StandardDevC = []
-MeanC = []
-Samples = []
-Sampler1 = np.random.normal(0,1,1)
-Sampler1 = np.ones((np.size(RF.Zerwth,0),np.size(RF.Zerwth,1)))*Sampler1
-MainSamples = np.zeros((np.size(RF.Zerwth,0),np.size(RF.Zerwth,1)))
-Sampler = np.reshape(RF.X1, (Ch.n, Ch.m))
-MeanGlobal = np.zeros((np.size(RF.Zerwth,0),np.size(RF.Zerwth,1)))
-StdGlobal = np.zeros((np.size(RF.Zerwth,0),np.size(RF.Zerwth,1)))
-StdGlobalwth = np.zeros((np.size(RF.Zerwth,0),np.size(RF.Zerwth,1)))
-StdGlobalbtw = np.zeros((np.size(RF.Zerwth,0),np.size(RF.Zerwth,1)))
 
-Error = np.random.normal(0,1,n*m)
-Yer = np.matmul(Lower,Error)
+def CreatePlot(figure, k,j, Rb, Rt, Fb, Ft, totalstats, z=1):
+    stats = totalstats[Rb:Rt,Fb:Ft]
+    stats = totalstats[Rb:Rt,Fb:Ft]
+    mean = np.mean(stats)
+    std = np.std(stats)
+    axnu = figure.add_subplot(discy, discx, k*(discx) +j +1)
+    stats = np.reshape(stats, np.size(stats))
+    axnu.hist(stats, bins= 15)
+    axnu.plot([mean,mean],[0,20], "r-", linewidth = 2)
+    if z == 1:
+        axnu.plot([0,0],[0,20], "k-", linewidth = 2)
+    else:
+        pass
+    axnu.text(mean, 0, "Mean = " + str("{:.2f}".format(mean)) + "\n" + "Std = " + str("{:.2f}".format(std)), fontsize = 7)
+    axnu.axis("off")
+    return mean, std
 
-for k in range(discy):
-    for j in range(discx):
-        dist = (j+1/2)*(Lx/discx)
-        meanval = CY.CalculateY(slc,dist)
-        stdvalbtw = CY.CalcStdBetween(slc)
-        stdvalwth = CY.CalcStdWithin(slc)[1]
-        MeanC.append(meanval)
+FigStatError = plt.figure(7)
+FigFunct = plt.figure(8)
+FigTotal = plt.figure(9)
+
+MeanEr = []
+StdEr = []
+MeanF = []
+StdF = []
+
+'''
+Method 1:
+    Calculate the mean and standard deviation at central point location
+'''
+
+
+
+def Method1(discx,discy):
+    MeanC = []
+    StandardC = []
+    MeanMethod1 = np.zeros(np.shape(VF.Zerwth))
+    StdMethod1 = np.zeros(np.shape(VF.Zerwth))
+    for k in range(discy):
+        for j in range(discx):
+            distx = (j+1/2)*(VF.Lx/discx) + Ch.initx
+            disty = (k+1/2)*(VF.Ly/discy) + Ch.inity
+            Rb = ma.ceil(k*(VF.Ly/discy)/dy)
+            Rt = ma.floor((k+1)*(VF.Ly/discy)/dy)+1
+            Fb = ma.ceil(j*(VF.Lx/discx)/dx)
+            Ft = ma.floor((j+1)*(VF.Lx/discx)/dx)+1
+            K = np.ones(np.shape(MeanMethod1[Rb:Rt,Fb:Ft]))
         
-        Rb = ma.ceil(k*(Ly/discy)/dy)
-        Rt = ma.floor((k+1)*(Ly/discy)/dy)+1
-        Fb = ma.ceil(j*(Lx/discx)/dx)
-        Ft = ma.floor((j+1)*(Lx/discx)/dx)+1
-        IMval = IM[Rb:Rt,Fb:Ft]
-        SamplingGlobal = Sampler[Rb:Rt,Fb:Ft]
-        sample = Yer[j+k*discx]
-        Samples.append(sample)
-        K = np.ones((np.size(IMval,0),np.size(IMval,1)))
-        matrixofmatrix.append(np.array(IMval))
-        IMval = IMval.reshape(np.size(IMval))
-        MeanIM = np.mean(IMval)
-        StdIM = np.std(IMval)
-        MeanGlobal[Rb:Rt,Fb:Ft] = MeanGlobal[Rb:Rt,Fb:Ft] + K*MeanIM
-        StdGlobal[Rb:Rt,Fb:Ft] = StdGlobal[Rb:Rt,Fb:Ft] + K*StdIM
-        StdGlobalwth[Rb:Rt,Fb:Ft] = StdGlobalwth[Rb:Rt,Fb:Ft] + K*stdvalwth
-        StdGlobalbtw[Rb:Rt,Fb:Ft] = StdGlobalbtw[Rb:Rt,Fb:Ft] + K*stdvalbtw
-        MainSamples[Rb:Rt,Fb:Ft] = MainSamples[Rb:Rt,Fb:Ft] + K*sample
-        MeansIM.append(MeanIM)
-        StdSIM.append(StdIM)
-        '''
-        plt.figure()
-        plt.hist(IMval, bins = 10)
-        '''
+            LognFunct = CY.LognormalFunct(VF.slc, distx, disty)
+            meanm1 = np.float(LognFunct[0])
+            stdm1 = np.float(LognFunct[1])
+            
+            MeanMethod1[Rb:Rt,Fb:Ft] = MeanMethod1[Rb:Rt,Fb:Ft] + K*meanm1
+            StdMethod1[Rb:Rt,Fb:Ft] = StdMethod1[Rb:Rt,Fb:Ft] + K*stdm1
+            
+            MeanC.append(meanm1)
+            StandardC.append(stdm1)
+            
+    return MeanC, StandardC,MeanMethod1, StdMethod1
 
-Corl = np.diag(Correlations)
-GD.ax.plot_wireframe(RF.X, RF.Y, RF.Mean)
-GD.ax.scatter3D(GD.CXp, GD.CYp, MeansIM, color = "red")
-GD.ax.scatter3D(GD.CXp, GD.CYp, MeanC, color = "red")
-GD.ax.plot_wireframe(RF.X, RF.Y, MeanGlobal, color="green")
 
-fig = plt.figure()
-ax = fig.add_subplot(121, projection='3d')
-ax.plot_wireframe(RF.X, RF.Y, IM)
-ax1 = fig.add_subplot(122, projection='3d')
-ax1.plot_wireframe(RF.X, RF.Y, MeanGlobal, color="green")
-ax1.plot_wireframe(RF.X, RF.Y, MeanGlobal*np.exp(StdGlobalwth*MainSamples+StdGlobalbtw*Sampler1), color = "red")
+def Method2(discx, discy):
+    MeanMeanGlobal = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
+    StdMeanGlobal = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
+    MeanOfMeanVector = [] 
+    StdOfMeanVector  = []
+    StatError = np.reshape(VF.Res, (Ch.n,Ch.m))
+    StatFunct = np.reshape(VF.Zerbtw, (Ch.n,Ch.m))
+    StatTotal = np.reshape(VF.Zerwth, (Ch.n,Ch.m))
+    for k in range(discy):
+        for j in range(discx):
+            Rb = ma.ceil(k*(VF.Ly/discy)/dy)
+            Rt = ma.floor((k+1)*(VF.Ly/discy)/dy)+1
+            Fb = ma.ceil(j*(VF.Lx/discx)/dx)
+            Ft = ma.floor((j+1)*(VF.Lx/discx)/dx)+1
+            
+            MeanCell = VF.Mean[Rb:Rt,Fb:Ft]
+            K = np.ones(np.shape(MeanCell))
+            MeanCell = MeanCell.reshape(np.size(MeanCell))
+            MeanOfMean = np.mean(MeanCell)
+            StdOfMean = np.std(MeanCell)
+            
+            MeanMeanGlobal[Rb:Rt,Fb:Ft] = MeanMeanGlobal[Rb:Rt,Fb:Ft] + K*MeanOfMean
+            StdMeanGlobal[Rb:Rt,Fb:Ft] = StdMeanGlobal[Rb:Rt,Fb:Ft] + K*StdOfMean
+            
+            MeanOfMeanVector.append(MeanOfMean)
+            StdOfMeanVector.append(StdOfMean)
+            
+            MeanStdEr = CreatePlot(FigStatError, k, j, Rb, Rt, Fb, Ft, StatError, 1)
+            MeanEr.append(MeanStdEr[0])
+            StdEr.append(MeanStdEr[1])
+            MeanStdFun = CreatePlot(FigFunct, k, j, Rb, Rt, Fb, Ft, StatFunct, 0)
+            MeanF.append(MeanStdFun[0])
+            StdF.append(MeanStdFun[1])
+            CreatePlot(FigTotal, k, j, Rb, Rt, Fb, Ft, StatTotal,0)
+            
+    return MeanOfMeanVector,StdOfMeanVector,MeanMeanGlobal, StdMeanGlobal
 
+def Method22(discx, discy):
+    MeanMeanGlobal = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
+    MeanOfMeanVector = [] 
+    for k in range(discy):
+        for j in range(discx):
+            Rb = ma.ceil(k*(VF.Ly/discy)/dy)
+            Rt = ma.floor((k+1)*(VF.Ly/discy)/dy)+1
+            Fb = ma.ceil(j*(VF.Lx/discx)/dx)
+            Ft = ma.floor((j+1)*(VF.Lx/discx)/dx)+1
+            
+            MeanCell = VF.Mean[Rb:Rt,Fb:Ft]
+            K = np.ones(np.shape(MeanCell))
+            MeanCell = MeanCell.reshape(np.size(MeanCell))
+            MeanOfMean = np.mean(MeanCell)
+            
+            MeanMeanGlobal[Rb:Rt,Fb:Ft] = MeanMeanGlobal[Rb:Rt,Fb:Ft] + K*MeanOfMean
+            
+            MeanOfMeanVector.append(MeanOfMean)
+            
+    return MeanOfMeanVector,MeanMeanGlobal
+
+def Method23(discx, discy):
+    StdMeanGlobal = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
+    StdOfMeanVector  = []
+    for k in range(discy):
+        for j in range(discx):
+            Rb = ma.ceil(k*(VF.Ly/discy)/dy)
+            Rt = ma.floor((k+1)*(VF.Ly/discy)/dy)+1
+            Fb = ma.ceil(j*(VF.Lx/discx)/dx)
+            Ft = ma.floor((j+1)*(VF.Lx/discx)/dx)+1
+            
+            MeanCell = VF.Mean[Rb:Rt,Fb:Ft]
+            K = np.ones(np.shape(MeanCell))
+            MeanCell = MeanCell.reshape(np.size(MeanCell))
+            StdOfMean = np.std(MeanCell)
+            
+            StdMeanGlobal[Rb:Rt,Fb:Ft] = StdMeanGlobal[Rb:Rt,Fb:Ft] + K*StdOfMean
+            
+            StdOfMeanVector.append(StdOfMean)
+            
+    return StdOfMeanVector, StdMeanGlobal
+
+def Method24(discx, discy):
+    MeanErrorGlobal = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
+    MeanOfErrorVector = [] 
+    for k in range(discy):
+        for j in range(discx):
+            Rb = ma.ceil(k*(VF.Ly/discy)/dy)
+            Rt = ma.floor((k+1)*(VF.Ly/discy)/dy)+1
+            Fb = ma.ceil(j*(VF.Lx/discx)/dx)
+            Ft = ma.floor((j+1)*(VF.Lx/discx)/dx)+1
+            L = VF.L
+            ResidualWth = np.random.normal(0,1, n*m)
+            ResidualWth = np.matmul(L,ResidualWth)
+            
+            
+            ErrorCell = ResidualWth[Rb:Rt,Fb:Ft]
+            K = np.ones(np.shape(ErrorCell))
+            ErrorCell = ErrorCell.reshape(np.size(ErrorCell))
+            MeanOfError = np.mean(ErrorCell)
+            
+            MeanErrorGlobal[Rb:Rt,Fb:Ft] = MeanErrorGlobal[Rb:Rt,Fb:Ft] + K*MeanOfError
+            
+            MeanOfErrorVector.append(MeanOfError)
+            
+    return MeanOfErrorVector,MeanErrorGlobal
+
+def Method25(discx, discy):
+    StdErrorGlobal = np.zeros((np.size(VF.Zerwth,0),np.size(VF.Zerwth,1)))
+    StdOfErrorVector  = []
+    for k in range(discy):
+        for j in range(discx):
+            Rb = ma.ceil(k*(VF.Ly/discy)/dy)
+            Rt = ma.floor((k+1)*(VF.Ly/discy)/dy)+1
+            Fb = ma.ceil(j*(VF.Lx/discx)/dx)
+            Ft = ma.floor((j+1)*(VF.Lx/discx)/dx)+1
+            
+            MeanCell = VF.Mean[Rb:Rt,Fb:Ft]
+            K = np.ones(np.shape(MeanCell))
+            MeanCell = MeanCell.reshape(np.size(MeanCell))
+            StdOfMean = np.std(MeanCell)
+            
+            StdErrorGlobal[Rb:Rt,Fb:Ft] = StdErrorGlobal[Rb:Rt,Fb:Ft] + K*StdOfMean
+            
+            StdOfErrorVector.append(StdOfMean)
+            
+    return StdOfMeanVector, StdMeanGlobal
+
+
+
+
+
+MeanC, StandardC, MeanMethodC, StdMethodC = Method1(discx, discy)
+MeanOfMeanVector,StdOfMeanVector,MeanMeanGlobal, StdMeanGlobal = Method2(discx, discy)
+
+GD.ax.plot_surface(VF.X, VF.Y, VF.Mean)
+#GD.ax.plot_wireframe(VF.X, VF.Y, np.reshape(MeanMeanGlobal, (Ch.n,Ch.m)), color="green")
+GD.ax.plot_wireframe(VF.X, VF.Y,  np.reshape(MeanMethodC, (Ch.n,Ch.m)), color="red")
+
+fig = plt.figure(6)
+ax1 = fig.add_subplot(121)
+ax1.contourf(VF.X, VF.Y, VF.Mean, levels = discx*discy)
+ax2 = fig.add_subplot(222)
+ax2.contourf(VF.X, VF.Y, np.reshape(MeanMethodC, (Ch.n,Ch.m)), levels = MeanC.sort())
+ax2.contour(VF.X, VF.Y, np.reshape(MeanMethodC, (Ch.n,Ch.m)), levels = MeanC.sort())
+ax3 = fig.add_subplot(224)
+ax3.contourf(VF.X, VF.Y, np.reshape(MeanMeanGlobal, (Ch.n,Ch.m)), levels = MeanOfMeanVector.sort())
+ax3.contour(VF.X, VF.Y, np.reshape(MeanMeanGlobal, (Ch.n,Ch.m)), levels = MeanOfMeanVector.sort())

@@ -70,10 +70,10 @@ def LognormalFunct(slc, x, y):
     UVprW = np.matmul(Tfita, XYZ)
     
     uc = [max(min(u, (1-xl)*L), -xl*L) for u in UVW[0]]
-    vc = [max(min(v, (1-xw)*W), -xw*W) for v in UVW[0]]
-    vcpr = [max(min(v, (1-xw)*Wpr), -xw*Wpr) for v in UVW[0]]
+    vc = [max(min(v, (1-xw)*W), -xw*W) for v in UVW[1]]
+    vcpr = [max(min(v, (1-xw)*Wpr), -xw*Wpr) for v in UVprW[1]]
     RRUP = np.sqrt((UVW[0]-uc)**2 + (UVW[1]-vc)**2 + UVW[2]**2)
-    RJB = np.sqrt((UVW[0]-uc)**2 + (UVW[1]-vcpr)**2)
+    RJB = np.sqrt((UVW[0]-uc)**2 + (UVprW[1]-vcpr)**2)
     RX = UVprW[1] + xw*Wpr
     FHW = np.array([(1 if r > 0 else 0) for r in RX])
         
@@ -125,4 +125,4 @@ def LognormalFunct(slc, x, y):
     
 #   ------------- Calculate the total standard deviation of the distribution ----------------    
     sigmaT = np.sqrt((1+NLo)**2*tau**2+sigmaNLo**2)
-    return y, sigmaT, NLo, sigmaNLo, tau
+    return np.log(y), sigmaT, NLo, sigmaNLo, tau
