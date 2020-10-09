@@ -20,15 +20,15 @@ import matplotlib.animation as animation
 import Cholesky as Ch
 import JayaramBaker2009 as JB
 
-Lx = Ch.Lx
-Ly = Ch.Ly
+Lx = 15
+Ly = 15
 discx = 5
 discy = 5
 
 n = discx +1
 m = discy +1
-initdistx = Ch.initx
-initdisty = Ch.inity
+initdistx = 5
+initdisty = 5
 dx = Lx/(n)
 dy = Ly/(m)
 

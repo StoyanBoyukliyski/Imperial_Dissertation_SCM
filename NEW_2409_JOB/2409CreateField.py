@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 23 13:29:33 2020
+Created on Thu Sep 24 19:13:12 2020
 
 @author: StoyanBoyukliyski
 """
 
+import Cholesky as Ch
+import ChiouandYoung2014 as CY2014
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import VectorField as VF
 
 
 #--- The region is used to calculate the z10 value which would be altered if related to Japan ---
+
 region = "US"
 
 #--- M refers to magnitude for the moment magnitude scale ---
-M = 8
+M = 7
 
 #--- This is supposed to locate the regressions coefficients files in their directory ---
 data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
@@ -144,6 +149,9 @@ dDPP = 0
 Finferred = 0
 Fmeasured = 1
 
+#Dummy parameter
+ni = 0
+
 #Rabge of applicability of the model, forbids you to put too small or too large values of velocity
 if VS30 < 180 or VS30 > 1500:
     raise(ValueError("The Shear Wave Velocity is out of the range of applicability"))
@@ -173,3 +181,25 @@ Wpr = W*np.cos(beta)
 #The relative location of the hypocenter on the fault
 xw = 1/2
 xl = 1/2
+
+#the select corresponds to the period of vibration in the response spectrum
+select = str(0.1)
+data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
+data = data.set_index("Period(s)")
+slc = data.loc[select]
+
+initx = 10
+inity = -10
+
+Lx = 50
+Ly = 50
+numpoints=1000
+
+x = np.random.uniform(initx, initx + Lx, numpoints)
+y = np.random.uniform(inity, inity + Ly, numpoints)
+
+Lower, Cg = Ch.FastMatrixBuilder(select, x,y)
+
+VF.NewVectorField(x, y, initx, inity, Lower, T, Tfita, beta, W, L, xl, xw, slc, select, Wpr, ZTOR, lambangle,FRV, FNM, dZTOR, M, dDPP, VS30, dZ10, ni, Finferred, Fmeasured)
+
+

@@ -21,21 +21,30 @@ def Rho(h):
     return rho
         
         
+dist  = 10
 
 x1 = 0
-x2 = 2
-x3 = 2
-x4 = 5
+x2 = 0.3
+x3 = 0
+x4 = 0.3
 
 
 y1 = 0
-y2 = 2
-y3 = 4
-y4 = 6
+y2 = 0.3
+y3 = 0
+y4 = 0.3
 
-fig = plt.figure(1)
+fig = plt.figure()
 ax1 = fig.add_subplot(121)
 ax2 = fig.add_subplot(122)
+ax1.set_title("Visual Presentation of the integral", {'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'})
+ax1.set_ylabel("North position relative to bottom-left edge (km)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax1.set_xlabel("East position relative to bottom-left edge (km)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+
+ax2.grid(linestyle = "--")
+ax2.set_title("Convergence study", {'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'})
+ax2.set_ylabel("Effective correlation (/)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax2.set_xlabel("Number of points in Simulation (/)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
 ax1.plot((x2+x1)/2,(y2+y1)/2, marker = "o", color = "black")
 ax1.plot((x4+x3)/2,(y4+y3)/2, marker = "o", color = "black")
 
@@ -60,7 +69,7 @@ XAVG1 = 0
 YAVG1 = 0
 XAVG2 = 0
 YAVG2 = 0
-for j in range(200):
+for j in range(1000):
     x = np.random.uniform(x1,x2,1)
     y = np.random.uniform(y1,y2,1)
     r = np.random.uniform(x3,x4,1)
@@ -90,6 +99,5 @@ for j in range(200):
     
 A = ax1.plot(XAVG1,YAVG1, marker = "o", color = "b")
 B = ax1.plot(XAVG2,YAVG2, marker = "o", color = "b")
-    
 Rhoavg = rhos/n
 print("The effective correlation is :", str(Rho))

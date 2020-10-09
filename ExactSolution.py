@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 23 13:29:33 2020
+Created on Sat Aug 22 17:27:06 2020
 
 @author: StoyanBoyukliyski
 """
 
+import Cholesky as Ch
 import numpy as np
 import pandas as pd
-
-
+import ChiouandYoung2014 as CY14
+import matplotlib.pyplot as plt
 #--- The region is used to calculate the z10 value which would be altered if related to Japan ---
 region = "US"
 
 #--- M refers to magnitude for the moment magnitude scale ---
-M = 8
+M = 7
 
 #--- This is supposed to locate the regressions coefficients files in their directory ---
 data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
@@ -144,6 +145,9 @@ dDPP = 0
 Finferred = 0
 Fmeasured = 1
 
+#Dummy parameter
+ni = 0
+
 #Rabge of applicability of the model, forbids you to put too small or too large values of velocity
 if VS30 < 180 or VS30 > 1500:
     raise(ValueError("The Shear Wave Velocity is out of the range of applicability"))
@@ -173,3 +177,64 @@ Wpr = W*np.cos(beta)
 #The relative location of the hypocenter on the fault
 xw = 1/2
 xl = 1/2
+
+#the select corresponds to the period of vibration in the response spectrum
+select = str(0.1)
+data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
+data = data.set_index("Period(s)")
+slc = data.loc[select]
+    
+#The distance between points is fixed in between iterations, so that the random fields have similar 
+Standard = []
+CgMatrix = []
+
+#Position of the site relative to the fault (0,0) being the bottom left corner coinciding with the rupture epicenter
+initx = -5
+inity = -5
+iterations = 1000
+time_mcs = []
+time_analytic = []
+ComputationalStandardVector = []
+CentralStandardVector = []
+RevisedCentralVector = []
+DeterminantDeviation = []
+#This loop is used to calculate the mean and standard deviations of the residuals for different sizes of land
+#Lx varies between 10x10 to 30x30km and the distance between datapo ints remains the same, meaning that
+#the size of n and m increases and the computational cost increases with increase of size giving a restriction on the speed
+discretizationx = 1
+discretizationy = 1
+def DeterminantApproach(numpoints, realizations, select, slc, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr, initx, inity, Lx, Ly):
+    stddev = []
+    for _ in range(realizations):
+        x = np.random.uniform(initx, initx + Lx, numpoints)
+        y = np.random.uniform(inity, inity + Ly, numpoints)
+        Lower, Cg = Ch.FastMatrixBuilder(select, x,y)
+        lnSa, sigmaT, NLo, sigmaNLo, tau = CY14.NewLogFunction(slc, x, y, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr)
+        std = np.linalg.det(Cg)**(1/(2*numpoints))*sigmaNLo
+        stddev.append(std)
+        
+    StandardDev = np.mean(stddev)
+    print(StandardDev)
+    return StandardDev, Cg
+
+def CalculateThis(realizations, select, slc, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr, initx, inity, pointsfrom, pointsto, Lxymax):
+    fig = plt.figure()
+    ax2 = fig.add_subplot()
+    o= 1
+    for j in range(pointsfrom,pointsto):
+        standards= []
+        num = []
+        print(o)
+        o = o + 1
+        for k in np.linspace(2,Lxymax,5):
+            Lx = k
+            Ly = k
+            std, Cg = DeterminantApproach(j, realizations, select, slc, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr, initx, inity, Lx, Ly)
+            standards.append(std)
+            num.append(k)
+        ax2.plot(num, standards, label = "Number of points: " + str(j))
+        ax2.set_title("Contour Plot of Residuals", {'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'})
+        ax2.set_ylabel("Standard Deviation",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad=20)
+        ax2.set_xlabel("number of points",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+        print(standards)
+    return ax2

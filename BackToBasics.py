@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 23 13:29:33 2020
+Created on Tue Aug 25 00:24:04 2020
 
 @author: StoyanBoyukliyski
 """
-
-import numpy as np
+import VectorField as VF
+import Cholesky as Ch
+import matplotlib.pyplot as plt
 import pandas as pd
-
-
+import numpy as np
 #--- The region is used to calculate the z10 value which would be altered if related to Japan ---
 region = "US"
 
 #--- M refers to magnitude for the moment magnitude scale ---
-M = 8
+M = 7
 
 #--- This is supposed to locate the regressions coefficients files in their directory ---
 data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
@@ -22,15 +22,15 @@ data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDisserta
 The next three parameters are to do with the geometry of the fault
 '''
 #--- Beta - dip of the earthquake faulting (converted to radians in next line) ---
-beta = 30
+beta = 85
 beta = beta*np.pi/180
 
 #--- rake - this is the orientation of the fault relative to true north (converted to radians in next line) ---
-rake = 90
+rake = 25
 rake = rake*np.pi/180
 
 #--- lambangle - this is the direction of slip (used in degrees) ---
-lambangle = 90
+lambangle = 75
 
 
 #--- According to PJS calculations these are the transformation matrices used to calculate distances Rjb, Rx, Rrup ---
@@ -144,6 +144,9 @@ dDPP = 0
 Finferred = 0
 Fmeasured = 1
 
+#Dummy parameter
+ni = 0
+
 #Rabge of applicability of the model, forbids you to put too small or too large values of velocity
 if VS30 < 180 or VS30 > 1500:
     raise(ValueError("The Shear Wave Velocity is out of the range of applicability"))
@@ -173,3 +176,61 @@ Wpr = W*np.cos(beta)
 #The relative location of the hypocenter on the fault
 xw = 1/2
 xl = 1/2
+
+#the select corresponds to the period of vibration in the response spectrum
+select = str(0.1)
+data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
+data = data.set_index("Period(s)")
+slc = data.loc[select]
+    
+#The distance between points is fixed in between iterations, so that the random fields have similar 
+Standard = []
+CgMatrix = []
+
+#Position of the site relative to the fault (0,0) being the bottom left corner coinciding with the rupture epicenter
+initx = -20
+inity = -25
+iterations = 100
+time_mcs = []
+time_analytic = []
+ComputationalStandardVector = []
+CentralStandardVector = []
+RevisedCentralVector = []
+DeterminantDeviation = []
+#This loop is used to calculate the mean and standard deviations of the residuals for different sizes of land
+#Lx varies between 10x10 to 30x30km and the distance between datapo ints remains the same, meaning that
+#the size of n and m increases and the computational cost increases with increase of size giving a restriction on the speed
+discretizationx = 1
+discretizationy = 1
+numpoints = 3
+o = 0
+Lxymax = 10
+numbers= []
+Lx = 1
+Ly = 1
+std = []
+num = []
+attempts = np.linspace(2,1000, 100)
+for number in attempts:
+    number = int(number)
+    x = np.random.uniform(initx, initx + Lx, number)
+    y = np.random.uniform(inity, inity + Ly, number)
+    Lower, Cg = Ch.FastMatrixBuilder(select, x,y)
+    #VF.NewVectorField(x, y, initx, inity, Lower, T, Tfita, beta, W, L, xl, xw, slc, select, Wpr, ZTOR, lambangle,FRV, FNM, dZTOR, M, dDPP, VS30, dZ10, ni, Finferred, Fmeasured)
+    vector = np.linalg.det(Cg)**(1/(2*number))
+    if vector == 0:
+        break
+    else:
+        pass
+    std.append(vector)
+    num.append(number)
+
+print(std)
+figure = plt.figure()
+ax = figure.add_subplot(111)
+ax.plot(num, std, label= "Area size: " + str(Lx) + "km x " + str(Ly) + "km")
+ax.grid(linestyle = "--")
+ax.legend(loc = "upper right", prop = {"size": 7})
+ax.set_title("Standard deviation as a function of number of points", {'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'})
+ax.set_ylabel("Effective standard deviation",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax.set_xlabel("number of points used",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)

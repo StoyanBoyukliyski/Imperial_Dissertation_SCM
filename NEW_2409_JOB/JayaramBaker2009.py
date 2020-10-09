@@ -15,6 +15,4 @@ def Rho(h,T):
     else:
         parb = 22 + 3.7*float(T)
         
-    rho = np.exp(-3*h/parb)
-    
-    return rho
+    return np.exp(-3*h/parb)

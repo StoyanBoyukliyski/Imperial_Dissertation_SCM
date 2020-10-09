@@ -1,29 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jul 18 16:32:09 2020
+Created on Fri Aug 21 22:04:30 2020
 
 @author: StoyanBoyukliyski
 """
 
-import ChiouandYoung2014 as CY
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Aug  5 13:09:54 2020
+
+@author: StoyanBoyukliyski
+"""
+
+import Cholesky as Ch
+import ChiouandYoung2014 as CY2014
+import CellStatAnalysis as CSA
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.stats import norm
-from scipy.stats import lognorm
-from mpl_toolkits import mplot3d
-from mpl_toolkits.mplot3d import Axes3D
-from itertools import combinations
-from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
-                               AutoMinorLocator)
-
-import matplotlib.animation as animation
+import numericalintegration as nmi
+import time
+import VectorField as VF
+import ExactSolution as ES
 
 #--- The region is used to calculate the z10 value which would be altered if related to Japan ---
+
 region = "US"
 
 #--- M refers to magnitude for the moment magnitude scale ---
-M = 8
+M = 7
+
 #--- This is supposed to locate the regressions coefficients files in their directory ---
 data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
 
@@ -193,60 +199,89 @@ data = data.set_index("Period(s)")
 slc = data.loc[select]
     
 #The distance between points is fixed in between iterations, so that the random fields have similar 
-distx = 1
-disty = 1
 Standard = []
 CgMatrix = []
 
 #Position of the site relative to the fault (0,0) being the bottom left corner coinciding with the rupture epicenter
-initx = 0
-inity = 0
+initx = -5
+inity = -5
 iterations = 1000
 time_mcs = []
 time_analytic = []
-ComputationalStandardVector = []
+numberofcurves = 5
+ComputationalStandardVector = [[] for _ in range(numberofcurves)]
 CentralStandardVector = []
 RevisedCentralVector = []
+DeterminantDeviation = []
 #This loop is used to calculate the mean and standard deviations of the residuals for different sizes of land
 #Lx varies between 10x10 to 30x30km and the distance between datapo ints remains the same, meaning that
 #the size of n and m increases and the computational cost increases with increase of size giving a restriction on the speed
-
-Intensity = []
-StdWth = []
-StdBtw = []
-usablespec = data.index[2:]
-
-for j in usablespec:
-    slc = data.loc[j]
-    Intensity.append(float(CY.LognormalFunct(slc, 0,0, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr)[0]))
-    StdWth.append(float(CY.LognormalFunct(slc, 0,0, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr)[3]))
-    StdBtw.append(float(CY.LognormalFunct(slc, 0,0, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr)[4]))
-
-figure = plt.figure(1)
-ax2 = figure.add_subplot(111)
-C = np.zeros((len(usablespec),len(usablespec)))
-
-def I(Tmin):
-    if Tmin < 0.189:
-        I = 1
-    else:
-        I = 0
-    return I
-
-ax2.plot([float(u) for u in usablespec], np.exp(Intensity), "k-")
-
-for j in range(1):
-    ResidualBtw = np.random.normal(0,1,1)
-    ResidualWth = np.random.normal(0,1,np.size(StdWth))
+discretizationx = 1
+discretizationy = 1
+o = 0
+Lxymax = 30
+numbers= []
+zrr = np.linspace(50, 1000, numberofcurves)
+for j in np.linspace(2,Lxymax,5):
+    j = int(j)
+    numbers.append(j)
+    o = o + 1
+    print("The procedure began")
+    print("Itteration No: ", o)
+    Lx = j
+    Ly = j
+    time_one = time.time()
+    print("The procedure for estimating the standard deviation by sampling has commenced")
+    print("The standard deviation from sampling has been established and the plotting of the Random fields began")
     
-    ax2.plot([float(u) for u in usablespec], np.exp(Intensity + ResidualBtw*StdBtw + ResidualWth*StdWth), "b-", linewidth = 0.6)
+    time_two = time.time()
+    time_mcs.append(time_two-time_one)
+    print(time_two-time_one)
+    print("The mean and standard deviation in the middle point of the cell was calculated")
+    MeanC, StandardC, = CSA.Method1new(discretizationx,discretizationy, Lx, Ly, slc, initx, inity, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr)
+    it = 0
+    for numpoints in zrr:
+        numpoints = int(numpoints)
+        x = np.random.uniform(initx, initx + Lx, numpoints)
+        y = np.random.uniform(inity, inity + Ly, numpoints)
+        mean, std = CSA.MonteCarloErrornew(plt.figure(), discretizationx, discretizationy, Lx, Ly, slc, initx, inity, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, W, L, Wpr, iterations, select, numpoints)
+        Lower,Cg = Ch.FastMatrixBuilder(select, x,y)
+        VF.NewVectorField(x, y, initx, inity, Lower, T, Tfita, beta, W, L, xl, xw, slc, select, Wpr, ZTOR, lambangle,FRV, FNM, dZTOR, M, dDPP, VS30, dZ10, ni, Finferred, Fmeasured)
+        ComputationalStandardVector[it].append(std)
+        it = it + 1
+    print("The quadruple integral is now being calculated")
+    Rhoeff = nmi.NumericalIntegration(initx, initx+Lx, inity, inity+Ly, select)
+    RevisedStandardC = np.asarray(StandardC)*np.sqrt(1- Rhoeff**2)
+    CentralStandardVector.append(StandardC)
+    RevisedCentralVector.append(RevisedStandardC)
+    time_three = time.time()
+    time_analytic.append(time_three-time_two)
+    print("Itteration finished")
+    print(time_three-time_two)
 
-ax2.set_xscale("log")
-ax2.set_yscale("log")
-ax2.set_title("Response Spectrum using C&Y(2014)")
-ax2.set_xlabel("Period T (sec)")
-ax2.set_ylabel("Acceleration (g)")
-ax2.grid(True, which = "both", axis = "both", linestyle = "--")
-IntensityDict = pd.DataFrame(usablespec, Intensity)
-ax2.text(1, max(Intensity)-0.5, "Max Intenisty = " + str("{:.2f}".format(max(Intensity))) + "g" + "\n" + "at T =" + IntensityDict.loc[max(Intensity)][0] + " sec")
-
+ax2 = ES.CalculateThis(iterations, select, slc, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, L, W, Wpr, initx, inity, 2, 15, Lxymax)
+ax2.grid(linestyle = "--")
+ax2.set_title("Different methods of deriving a revised standard deviation", {'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'})
+ax2.set_ylabel("Effective Standard Deviation of IM",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax2.set_xlabel("Size of region (km)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax2.legend(loc = "upper right", prop = {"size": 7})
+figure = plt.figure()
+ax = figure.add_subplot(121)
+for it in range(numberofcurves):
+    ax.plot(numbers,ComputationalStandardVector[it], label = "Random Field Solution with " + str(zrr[it]) + " points")
+    ax2.plot(numbers,ComputationalStandardVector[it], label = "Random Field Solution with " + str(zrr[it]) + " points")
+ax.plot(numbers,RevisedCentralVector, label= "Analytical Solution - two point approach")
+ax.plot(numbers,CentralStandardVector,  label= "Uncorrelated Deviations - current method")
+ax.grid(linestyle = "--")
+ax.legend(loc = "upper right", prop = {"size": 7})
+ax.set_title("Different methods of deriving a revised standard deviation", {'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'})
+ax.set_ylabel("Effective Standard Deviation of IM",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax.set_xlabel("Size of region (km)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax1 = figure.add_subplot(122)
+ax1.plot(numbers,time_mcs)
+ax1.plot(numbers,time_analytic)
+ax1.grid(linestyle = "--")
+ax1.set_title("Different methods of deriving a revised standard deviation", {'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'})
+ax1.set_ylabel("Time to perform procedure",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax1.set_xlabel("Size of region (km)",{'fontsize': 12, 'fontweight' : 12, 'verticalalignment': 'baseline'},labelpad = 10)
+ax1.legend(loc = "upper right", prop = {"size": 7})

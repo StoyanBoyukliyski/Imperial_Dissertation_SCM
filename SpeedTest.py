@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 23 13:29:33 2020
+Created on Thu Aug 13 15:38:46 2020
 
 @author: StoyanBoyukliyski
 """
-
+import Cholesky as Ch
+import ChiouandYoung2014 as CY2014
+import CellStatAnalysis as CSA
 import numpy as np
 import pandas as pd
-
+import matplotlib.pyplot as plt
+import numericalintegration as nmi
+import time
+import VectorField as VF
 
 #--- The region is used to calculate the z10 value which would be altered if related to Japan ---
 region = "US"
@@ -144,6 +149,9 @@ dDPP = 0
 Finferred = 0
 Fmeasured = 1
 
+#Dummy parameter
+ni = 0
+
 #Rabge of applicability of the model, forbids you to put too small or too large values of velocity
 if VS30 < 180 or VS30 > 1500:
     raise(ValueError("The Shear Wave Velocity is out of the range of applicability"))
@@ -173,3 +181,48 @@ Wpr = W*np.cos(beta)
 #The relative location of the hypocenter on the fault
 xw = 1/2
 xl = 1/2
+
+#the select corresponds to the period of vibration in the response spectrum
+select = str(0.1)
+data = pd.read_csv("C:\\Users\\StoyanBoyukliyski\\OneDrive\\Desktop\\MScDissertation\PythonFiles\\RegressionCoefficients.csv")
+data = data.set_index("Period(s)")
+slc = data.loc[select]
+    
+#The distance between points is fixed in between iterations, so that the random fields have similar 
+distx = 0.01
+disty = 0.01
+Standard = []
+CgMatrix = []
+
+#Position of the site relative to the fault (0,0) being the bottom left corner coinciding with the rupture epicenter
+initx = 0
+inity = 0
+iterations = 1000
+time_mcs = []
+time_analytic = []
+ComputationalStandardVector = []
+CentralStandardVector = []
+RevisedCentralVector = []
+
+Lx = 10
+Ly = 0
+n = int(Lx/distx) + 1
+m = int(Ly/disty) + 1
+x = np.linspace(0, Lx, n-1)
+y = np.linspace(0, Ly, m-1)
+xsc = np.random.uniform(0, Lx, 1000)
+ysc = np.random.uniform(0, Ly, 1000)
+
+time_one = time.time()
+print(time_one)
+Cg  = Ch.MatrixBuilder(select, n, m, distx, disty)
+Cr = Ch.FastMatrixBuilder(select, xsc,ysc)
+
+Lower = np.linalg.cholesky(Cg)
+
+    
+std, mean = CSA.MonteCarloError(plt.figure(), 1, 1, Lx, Ly, n, m, distx, disty, Lower, slc, initx, inity, FRV, FNM, dZTOR, M, beta, dDPP, ZTOR, VS30, dZ10, ni, Finferred, Fmeasured, Tfita, T, xl, xw, W, L, Wpr, iterations)
+VF.CreateVectorField(Lx, Ly, n, m, initx, inity, distx, disty, Lower, T, Tfita, beta, W, L, xl, xw, slc, select, Wpr, ZTOR, lambangle,FRV, FNM, dZTOR, M, dDPP, VS30, dZ10, ni, Finferred, Fmeasured)
+
+time_two = time.time()
+print(time_two-time_one)
